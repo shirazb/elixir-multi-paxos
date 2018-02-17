@@ -1,4 +1,4 @@
-#Harry Moore (hrm15) and Shiraz Butt (sb4145)
+#Harry Moore (hrm15) and Shiraz Butt (sb4515)
 
 defmodule Acceptor do
 
