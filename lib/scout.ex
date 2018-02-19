@@ -2,7 +2,7 @@
 
 defmodule Scout do
 
-  def start leader, acceptors, ballot_num do
+  def start _config, leader, acceptors, ballot_num do
 
     listen leader, acceptors, ballot_num, acceptors, MapSet.new()
 
