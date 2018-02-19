@@ -2,7 +2,7 @@
 
 defmodule Commander do
 
-  def start leader, acceptors, replicas, pvalue do
+  def start _config, leader, acceptors, replicas, pvalue do
 
     for a <- acceptors, do: send a, {:p2a, self(), pvalue}
 
