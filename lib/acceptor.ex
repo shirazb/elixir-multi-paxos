@@ -14,19 +14,19 @@ defmodule Acceptor do
 
     receive do
 
-      {:propose, leader, b} ->
+      {:p1a, leader, b} ->
         if b > ballot_num do
           ballot_num = b
         end
 
-        send leader, {:promise, self(), ballot_num, accepted}
+        send leader, {:p1b, self(), ballot_num, accepted}
 
-      {:ask_accept, leader, {b, _s, _tx} = pvalue } ->
+      {:p2a, leader, {b, _s, _tx} = pvalue } ->
         if b == ballot_num do
           accepted = MapSet.put(accepted, pvalue)
         end
 
-        send leader, {:accepted, self(), ballot_num}
+        send leader, {:p2b, self(), ballot_num}
 
     end
 
