@@ -28,6 +28,7 @@ defmodule Replica do
 
       { :decision, s, c } ->
         decisions = Map.put decisions, s, c
+        IO.puts "received a decision in replica"
         { proposals, requests, slot_out, database } = perform_decisions(
             slot_out,
             decisions,
@@ -68,6 +69,7 @@ defmodule Replica do
             if (decided_command != conflicting_proposed_command) do
               requests = MapSet.put requests, conflicting_proposed_command
             end
+          :error -> nil
         end
 
         { slot_out, database } = perform(
@@ -103,9 +105,12 @@ defmodule Replica do
   end
 
   defp propose slot_in, slot_out, requests, decisions, proposals, leaders do
+
     case Enum.fetch requests, 0 do
       { :ok, c } when slot_in < slot_out + @window ->
-        { slot_in, leaders, requests, proposals } = perform_one_proposal(
+
+        IO.puts "\n\nReplica #{inspect self()}:\n    slot_in = #{slot_in}\n    proposals = #{inspect proposals}\n    requests = #{inspect requests}"
+        { slot_in, leaders, requests, proposals } = send_one_proposal(
             c,
             slot_in,
             requests,
@@ -118,7 +123,7 @@ defmodule Replica do
     end
   end
 
-  defp perform_one_proposal(
+  defp send_one_proposal(
       c,
       slot_in,
       requests,
@@ -129,7 +134,7 @@ defmodule Replica do
     # Update leaders if reconfig would go here.
 
     if Map.fetch(decisions, slot_in) == :error do
-       requests = Map.delete requests, c
+       requests = MapSet.delete requests, c
        proposals = Map.put proposals, slot_in, c
        for l <- leaders, do: send l, { :propose, slot_in, c }
     end

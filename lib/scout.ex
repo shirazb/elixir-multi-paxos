@@ -11,9 +11,16 @@ defmodule Scout do
   def listen leader, acceptors, ballot_num, wait_for, pvalues do
     receive do
       { :p1b, acceptor, promised_ballot_num, accepted_pvals } ->
+
+        IO.puts "got p1b"
         if promised_ballot_num == ballot_num do
+
+          IO.puts "equal ballot numbers"
+
            pvalues = MapSet.union(pvalues, accepted_pvals)
            wait_for = MapSet.delete(wait_for, acceptor)
+
+           IO.inspect wait_for
 
            if MapSet.size(wait_for) < Enum.count(acceptors) / 2 do
              # Once we have a majority, inform the leader.
@@ -26,6 +33,8 @@ defmodule Scout do
         # Preempted by higher ballot number, so this ballot may now end in
         # conflict with another. Tell leader to try again.
         else
+
+          IO.puts "not equal ballot numbers"
           send leader, { :preempted, promised_ballot_num }
         end
     end

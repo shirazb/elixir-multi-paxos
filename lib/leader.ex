@@ -21,7 +21,7 @@ defmodule Leader do
         # Check if conflicting proposal for this slot has previously been made.
         proposalDoesConflict = case Map.fetch proposals, s do
             { :ok, d } -> c != d
-            :error -> true
+            :error -> false
         end
 
         # If conflicting, discard proposal; avoid possibly overwriting old
@@ -32,12 +32,13 @@ defmodule Leader do
           # Only if last Scout said a majority has accepted ballot number,
           # spawn commander.
           if (active) do
-            spawn Commander, :start, [config, acceptors, replicas,
+            spawn Commander, :start, [config, self(), acceptors, replicas,
                 { ballot_num, s, c }]
           end
         end
 
       { :adopted, ballot_num, previously_accepted_pvals } ->
+        IO.puts "Leader #{inspect self()}: Received adopted of #{inspect ballot_num}\n    proposals = #{inspect proposals}\n    Previously accepted = #{inspect previously_accepted_pvals}"
         # Remove conflicting proposals that may break invariant L2
         # from the paper.
         proposals = merge_without_conflicts proposals,
@@ -45,6 +46,7 @@ defmodule Leader do
 
         # Spawn a commander for each proposal.
         for { slot, command } <- proposals do
+          IO.puts "Leader #{inspect self()}: Commanding {#{slot}, #{command}}"
           spawn Commander, :start, [config, acceptors, replicas,
               { ballot_num, slot, command }]
         end

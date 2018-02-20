@@ -13,6 +13,7 @@ defmodule Acceptor do
     receive do
 
       {:p1a, leader, b} ->
+        IO.puts "Acceptor #{inspect self()}: Received p1a"
         if b > ballot_num do
           ballot_num = b
         end
@@ -20,6 +21,7 @@ defmodule Acceptor do
         send leader, {:p1b, self(), ballot_num, accepted}
 
       {:p2a, leader, {b, _s, _tx} = pvalue } ->
+        IO.puts "Acceptor #{inspect self()}: Received p2a"
         if b == ballot_num do
           accepted = MapSet.put(accepted, pvalue)
         end

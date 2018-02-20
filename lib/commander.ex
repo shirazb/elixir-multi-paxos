@@ -10,10 +10,14 @@ defmodule Commander do
   def listen leader, acceptors, replicas, { b, s, c } = pvalue , wait_for do
     receive do
       { :p2b, acceptor, adopted_b } ->
+
+        IO.puts "received p2b"
         if b == adopted_b do
           wait_for = MapSet.delete wait_for, acceptor
 
           if MapSet.size(wait_for) < Enum.count(acceptors) / 2 do
+
+            IO.puts "send decision to replicas"
             # If we have majority, inform replicas of decision.
             for r <- replicas, do: send r, { :decision, s, c }
           else
