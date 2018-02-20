@@ -18,8 +18,8 @@ defmodule Replica do
       monitor
   ) do
 
+    propose 1, 1, 1, 1, 1, 1, 1
     perform 1, 2, 3, 4
-
   end
 
   defp perform {_k, _cid, op} = request, slot_out, decisions, database do
@@ -43,10 +43,35 @@ defmodule Replica do
     { slot_out, database }
   end
 
-  def propose slot_in, slot_out, window, requests, decisions, proposals, leaders do
+  defp propose slot_in, slot_out, window, requests, decisions, proposals, leaders do
+    case Enum.fetch requests, 0 do
+      { :ok, c } when slot_in < slot_out + window ->
+        { slot_in, leaders, requests, proposals } = perform_one_proposal(
+            c,
+            slot_in,
+            slot_out,
+            window,
+            requests,
+            decisions,
+            requests,
+            leaders
+        )
+        propose slot_in, slot_out, window, requests, decisions, proposals, leaders
+      _ -> { slot_in, leaders, requests, proposals }
+    end
+  end
 
-    
-
+  defp perform_one_proposal(
+      c,
+      slot_in,
+      slot_out,
+      window,
+      requests,
+      decisions,
+      proposals,
+      leaders
+  ) do
+    { slot_in, leaders, requests, proposals }
   end
 
   defp key_exists key, {newkey, newvalue} do
