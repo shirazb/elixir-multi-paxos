@@ -1,8 +1,10 @@
 # Harry Moore (hrm15) and Shiraz Butt (sb4515)
 defmodule Replica do
+  @window 100
+
   def start _config, database, monitor do
     receive do { :bind, leaders } ->
-      listen leaders, database, 1, 1, MapSet.empty(), Map.new(),
+      listen leaders, database, 1, 1, MapSet.new(), Map.new(),
           Map.new(), monitor
     end
   end
@@ -18,45 +20,98 @@ defmodule Replica do
       monitor
   ) do
 
-    propose 1, 1, 1, 1, 1, 1, 1
-    perform 1, 2, 3, 4
-  end
+    receive do
+      { :client_request, c } ->
+          requests = MapSet.put requests, c
 
-  defp perform {_k, _cid, op} = request, slot_out, decisions, database do
-    already_decided? = Enum.any?(
+      { :decision, s, c } ->
+        decisions = Map.put decisions, s, c
+        { proposals, requests, slot_out, database } = perform_decisions(
+            slot_out,
+            decisions,
+            proposals,
+            requests,
+            database
+        )
+
+    end
+
+    { slot_in, leaders, requests, proposals } = propose(
+        slot_in,
+        slot_out,
+        requests,
         decisions,
-        &(value_exists_less_than({slot_out, request}, &1))
+        proposals,
+        leaders
     )
 
-    if already_decided? do
+    listen leaders, database, slot_in, slot_out, requests, proposals,
+        decisions, monitor
+  end
+
+  defp perform_decisions(
+      slot_out,
+      decisions,
+      proposals,
+      requests,
+      database
+  ) do
+
+    case Map.fetch decisions, slot_out do
+      :error -> { proposals, requests, slot_out, database }
+      { :ok, decided_command } ->
+        case Map.fetch proposals, slot_out do
+          { :ok, conflicting_proposed_command } ->
+            proposals = Map.delete proposals, slot_out
+            if (decided_command != conflicting_proposed_command) do
+              requests = MapSet.put requests, conflicting_proposed_command
+            end
+        end
+
+        { slot_out, database } = perform(
+            decided_command,
+            slot_out,
+            decisions,
+            database
+        )
+
+        perform_decisions slot_out, decisions, proposals, requests, database
+    end
+
+
+  end
+
+  defp perform decided_command_at_slot_out, slot_out, decisions, database do
+    already_decided_in_earlier_slot? = Enum.any?(
+        decisions,
+        &(decided_in_earlier_slot?({slot_out, decided_command_at_slot_out}, &1))
+    )
+
+    if already_decided_in_earlier_slot? do
       slot_out = slot_out + 1
     else
-
+      { _k, _cid, op } = decided_command_at_slot_out
       send database, { :execute, op }
-
       slot_out = slot_out + 1
 
       #send k, {:response, cid, _result}
-
     end
 
     { slot_out, database }
   end
 
-  defp propose slot_in, slot_out, window, requests, decisions, proposals, leaders do
+  defp propose slot_in, slot_out, requests, decisions, proposals, leaders do
     case Enum.fetch requests, 0 do
-      { :ok, c } when slot_in < slot_out + window ->
+      { :ok, c } when slot_in < slot_out + @window ->
         { slot_in, leaders, requests, proposals } = perform_one_proposal(
             c,
             slot_in,
-            slot_out,
-            window,
             requests,
             decisions,
             requests,
             leaders
         )
-        propose slot_in, slot_out, window, requests, decisions, proposals, leaders
+        propose slot_in, slot_out, requests, decisions, proposals, leaders
       _ -> { slot_in, leaders, requests, proposals }
     end
   end
@@ -64,8 +119,6 @@ defmodule Replica do
   defp perform_one_proposal(
       c,
       slot_in,
-      slot_out,
-      window,
       requests,
       decisions,
       proposals,
@@ -84,14 +137,7 @@ defmodule Replica do
     { slot_in, leaders, requests, proposals }
   end
 
-  defp key_exists key, {newkey, newvalue} do
-
-    key == newkey
-
-  end
-
-
-  defp value_exists_less_than {key, request}, {new_key, new_value} do
+  defp decided_in_earlier_slot? {key, request}, {new_key, new_value} do
     new_key < key and new_value == request
   end
 
