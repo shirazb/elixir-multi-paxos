@@ -8,7 +8,7 @@ defmodule Leader do
         initialBallotNum = { 0, self() }
 
         # Run Scouts and Commanders as local threads, not separate nodes.
-        spawn Scout, :start, [config, acceptors, initialBallotNum]
+        spawn Scout, :start, [config, self(), acceptors, initialBallotNum]
 
         lead config, acceptors, replicas, initialBallotNum, false, Map.new()
     end
@@ -60,7 +60,7 @@ defmodule Leader do
           # number is adopted).
           active = false
           ballot_num = { b_id + 1, self() }
-          spawn Scout, :start, [config, acceptors, ballot_num]
+          spawn Scout, :start, [config, self(), acceptors, ballot_num]
         end
     end
 
@@ -93,11 +93,11 @@ defmodule Leader do
         end
     end
 
-    max_pvals_by_sc = Enum.reduce put_if_higher, Map.new(), pvals
+    max_pvals_by_sc = Enum.reduce pvals, Map.new(), put_if_higher
 
     put_slot_to_command = fn m, { { s, c }, _b } -> Map.put m, s, c end
 
-    max_pvals = Enum.reduce put_slot_to_command, Map.new(), max_pvals_by_sc
+    max_pvals = Enum.reduce max_pvals_by_sc, Map.new(), put_slot_to_command
 
     max_pvals
   end
@@ -122,16 +122,16 @@ defmodule Leader do
 
     # Add all entries from ys and remove conflicting ones from xs.
     { not_conflicting, xs_without_conflicts } = Enum.reduce(
-        add_ys_and_remove_conflicting_xs,
+        ys,
         { not_conflicting, xs },
-        ys
+        add_ys_and_remove_conflicting_xs
     )
 
     # Add all proposals from xs_without_conflicts to not_conflicting.
     not_conflicting = Enum.reduce(
-        &Map.put/2,
+        xs_without_conflicts,
         not_conflicting,
-        xs_without_conflicts
+        &Map.put/2
     )
 
     not_conflicting

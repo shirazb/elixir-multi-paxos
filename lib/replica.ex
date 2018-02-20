@@ -2,10 +2,10 @@
 defmodule Replica do
   @window 100
 
-  def start _config, database, monitor do
+  def start _config, database, monitor, server_num do
     receive do { :bind, leaders } ->
       listen leaders, database, 1, 1, MapSet.new(), Map.new(),
-          Map.new(), monitor
+          Map.new(), monitor, server_num
     end
   end
 
@@ -17,12 +17,14 @@ defmodule Replica do
       requests,
       proposals,
       decisions,
-      monitor
+      monitor,
+      server_num
   ) do
 
     receive do
       { :client_request, c } ->
           requests = MapSet.put requests, c
+          send monitor, { :client_request, server_num }
 
       { :decision, s, c } ->
         decisions = Map.put decisions, s, c
@@ -46,7 +48,7 @@ defmodule Replica do
     )
 
     listen leaders, database, slot_in, slot_out, requests, proposals,
-        decisions, monitor
+        decisions, monitor, server_num
   end
 
   defp perform_decisions(

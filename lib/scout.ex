@@ -4,17 +4,18 @@ defmodule Scout do
 
   def start _config, leader, acceptors, ballot_num do
     for a <- acceptors, do: send a, { :p1a, self(), ballot_num }
-    listen leader, acceptors, ballot_num, acceptors, MapSet.new()
+
+    listen leader, acceptors, ballot_num, DAC.list_to_set(acceptors) , MapSet.new()
   end
 
   def listen leader, acceptors, ballot_num, wait_for, pvalues do
     receive do
-      { :p1b, acceptor, promised_ballot_num, pval } ->
+      { :p1b, acceptor, promised_ballot_num, accepted_pvals } ->
         if promised_ballot_num == ballot_num do
-           pvalues = MapSet.put(pvalues, pval)
+           pvalues = MapSet.union(pvalues, accepted_pvals)
            wait_for = MapSet.delete(wait_for, acceptor)
 
-           if MapSet.size(wait_for) < MapSet.size(acceptors) / 2 do
+           if MapSet.size(wait_for) < Enum.count(acceptors) / 2 do
              # Once we have a majority, inform the leader.
              send leader, { :adopted, ballot_num, pvalues }
            else

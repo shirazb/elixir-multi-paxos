@@ -13,7 +13,7 @@ def node_ip_addr do
 end
 
 def lookup name do
-  addresses = :inet_res.lookup name, :in, :a 
+  addresses = :inet_res.lookup name, :in, :a
   {a, b, c, d} = hd addresses   # get octets for 1st ipv4 address
   :"#{a}.#{b}.#{c}.#{d}"
 end
@@ -27,9 +27,9 @@ def node_spawn node, module, function, args do
   if Node.connect node do
     Process.sleep 5   	# in case Node needs time to load modules
     Node.spawn node, module, function, args
-  else 
+  else
     Process.sleep 100	# retry in 100ms
-    node_spawn node, module, function, args 
+    node_spawn node, module, function, args
   end
 end
 
@@ -49,15 +49,13 @@ def get_config do
   # add type of setup (single | docker | ssh)
   config = Map.put config, :setup, :'#{Enum.at System.argv, 1}'
 
-  # add no. of servers and clients 
+  # add no. of servers and clients
   config = Map.put config, :n_servers, String.to_integer(Enum.at System.argv, 2)
-  config = Map.put config, :n_clients, String.to_integer(Enum.at System.argv, 3) 
+  config = Map.put config, :n_clients, String.to_integer(Enum.at System.argv, 3)
 
   config
 end
 
+def list_to_set(list), do: MapSet.new list, fn x -> x end
+
 end # module -----------------------
-
-
-
-

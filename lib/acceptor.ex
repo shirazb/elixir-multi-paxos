@@ -5,9 +5,7 @@ defmodule Acceptor do
   @falsity -1
 
   def start _config do
-
     listen @falsity, MapSet.new()
-
   end
 
   def listen ballot_num, accepted do

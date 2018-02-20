@@ -4,7 +4,7 @@ defmodule Commander do
 
   def start _config, leader, acceptors, replicas, pvalue do
     for a <- acceptors, do: send a, { :p2a, self(), pvalue }
-    listen leader, acceptors, replicas, pvalue, acceptors
+    listen leader, acceptors, replicas, pvalue, DAC.list_to_set(acceptors)
   end
 
   def listen leader, acceptors, replicas, { b, s, c } = pvalue , wait_for do
@@ -13,7 +13,7 @@ defmodule Commander do
         if b == adopted_b do
           wait_for = MapSet.delete wait_for, acceptor
 
-          if MapSet.size(wait_for) < MapSet.size(acceptors) / 2 do
+          if MapSet.size(wait_for) < Enum.count(acceptors) / 2 do
             # If we have majority, inform replicas of decision.
             for r <- replicas, do: send r, { :decision, s, c }
           else
@@ -21,7 +21,7 @@ defmodule Commander do
             listen leader, acceptors, replicas, pvalue, wait_for
           end
 
-        # Between promising our ballot number and receiving our p2b, acceptor 
+        # Between promising our ballot number and receiving our p2b, acceptor
         # promised a higher one, thus this ballot may now conflict with
         # another. Tell leader to try again.
         else
