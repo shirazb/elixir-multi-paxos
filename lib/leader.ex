@@ -1,6 +1,7 @@
 # Harry Moore (hrm15) and Shiraz Butt (sb4515)
 
 defmodule Leader do
+  @livelock_sleep_time 200
 
   def start config do
     receive do
@@ -53,11 +54,16 @@ defmodule Leader do
         active = true
 
       { :preempted, { b_id, _leader } = other_ballot_num } ->
+        IO.puts "Leader #{inspect self()}: Preempted!"
         # Ignore preemptions from lower ballot numbers.
         if (other_ballot_num > ballot_num) do
           # We need to retry with higher ballot number. Spawn a Scout to
           # start a new ballot. Leader is no longer active (until new ballot
           # number is adopted).
+          # To help prevent livelock, sleep for a random amount of time before
+          # retrying.
+          # TODO: remove magic numbers.
+          Process.sleep (100 + DAC.random(@livelock_sleep_time))
           active = false
           ballot_num = { b_id + 1, self() }
           spawn Scout, :start, [config, self(), acceptors, ballot_num]
