@@ -20,7 +20,7 @@ defmodule Leader do
         # Check if conflicting proposal for this slot has previously been made.
         proposalDoesConflict = case Map.fetch proposals, s do
             { :ok, d } -> c != d
-            { :error } -> true
+            :error -> true
         end
 
         # If conflicting, discard proposal; avoid possibly overwriting old
@@ -89,7 +89,7 @@ defmodule Leader do
           { :ok, curB } -> if (curB < b)
               do Map.put m, { s, c }, b
               else m end
-          { :error } -> Map.put m, { s, c }, b
+          :error -> Map.put m, { s, c }, b
         end
     end
 
