@@ -2,8 +2,8 @@
 defmodule Replica do
   def start _config, database, monitor do
     receive do { :bind, leaders } ->
-      listen leaders, database, 1, 1, MapSet.empty(), MapSet.empty(),
-          MapSet.empty(), monitor
+      listen leaders, database, 1, 1, MapSet.empty(), Map.new(),
+          Map.new(), monitor
     end
   end
 
@@ -32,7 +32,7 @@ defmodule Replica do
       slot_out = slot_out + 1
     else
 
-      send database, {:execute, op}
+      send database, { :execute, op }
 
       slot_out = slot_out + 1
 
@@ -71,6 +71,16 @@ defmodule Replica do
       proposals,
       leaders
   ) do
+    # Update leaders if reconfig would go here.
+
+    if Map.fetch(decisions, slot_in) == :error do
+       requests = Map.delete requests, c
+       proposals = Map.put proposals, slot_in, c
+       for l <- leaders, do: send l, { :propose, slot_in, c }
+    end
+
+    slot_in = slot_in + 1
+
     { slot_in, leaders, requests, proposals }
   end
 
