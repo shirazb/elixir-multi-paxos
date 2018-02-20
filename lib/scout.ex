@@ -3,6 +3,7 @@
 defmodule Scout do
 
   def start _config, leader, acceptors, ballot_num do
+    for a <- acceptors, do: send a, { :p1a, self(), ballot_num }
     listen leader, acceptors, ballot_num, acceptors, MapSet.new()
   end
 
