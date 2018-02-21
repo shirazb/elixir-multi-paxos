@@ -19,6 +19,8 @@ defmodule Leader do
   defp lead config, acceptors, replicas, ballot_num, active, proposals do
     receive do
       { :propose, s, c } ->
+        IO.puts "Leader #{inspect self()}: Received proposal {#{s}, #{c}}"
+
         # Check if conflicting proposal for this slot has previously been made.
         proposalDoesConflict = case Map.fetch proposals, s do
             { :ok, d } -> c != d
@@ -75,12 +77,15 @@ defmodule Leader do
     lead config, acceptors, replicas, ballot_num, active, proposals
   end
 
-  # ps : Map<Slot, Command>
-  # qs : MapSet<BallotNumber, Slot, Command>
+  # Let arg 1 = ps : Map<Slot, Command>
+  # Let arg 2 = qs : MapSet<BallotNumber, Slot, Command>
   # Let rs = the map of <Slot, Command> from qs, such that its corresponding
   # ballot number in qs is the maximum for that slot-command combination.
   # Returns the { s, c } entries from ps such that there is no { s, c' } entry
   # in rs, where c != c'; union the entries from rs.
+  #
+  # Do this to make sure our proposals do not conflict with ones from
+  # previous ballots.
   defp merge_without_conflicts proposals, already_accepted_pvals do
     max_already_accepted_proposals =
         proposals_with_highest_ballot_nums already_accepted_pvals
@@ -89,6 +94,7 @@ defmodule Leader do
         max_already_accepted_proposals
   end
 
+  # Returns the <b, s, c>s from pvals with the maximal b for that <s, c>.
   defp proposals_with_highest_ballot_nums pvals do
     put_if_higher = fn { b, s, c }, m ->
         # Add { s, c } -> b to the map if b is the highest found so far for
@@ -109,6 +115,8 @@ defmodule Leader do
   end
 
   # TODO: looooooool name this better
+  # Choose proposals from xs if they do not conflict with ones from ys, union
+  # those from ys.
   defp merge_by_dropping_entries_with_conflicting_values_from_former xs, ys do
     not_conflicting = Map.new()
 
