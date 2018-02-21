@@ -19,7 +19,7 @@ defmodule Leader do
   defp lead config, acceptors, replicas, ballot_num, active, proposals do
     receive do
       { :propose, s, c } ->
-        IO.puts "Leader #{inspect self()}: Received proposal {#{s}, #{c}}"
+        IO.puts "Leader #{inspect self()}: Received proposal {#{inspect s}, #{inspect c}}"
 
         # Check if conflicting proposal for this slot has previously been made.
         proposalDoesConflict = case Map.fetch proposals, s do
