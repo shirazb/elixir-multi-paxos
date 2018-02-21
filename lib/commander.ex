@@ -14,6 +14,7 @@ defmodule Commander do
           wait_for = MapSet.delete wait_for, acceptor
 
           if MapSet.size(wait_for) < Enum.count(acceptors) / 2 do
+            IO.puts "Commander #{inspect self()}: Decided #{inspect pvalue}"
             # If we have majority, inform replicas of decision.
             for r <- replicas, do: send r, { :decision, s, c }
           else
@@ -25,6 +26,7 @@ defmodule Commander do
         # promised a higher one, thus this ballot may now conflict with
         # another. Tell leader to try again.
         else
+          IO.puts "Commander #{inspect self()}: Preempted by #{inspect adopted_b}"
           send leader, { :preempted, adopted_b }
         end
 

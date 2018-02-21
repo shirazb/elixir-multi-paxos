@@ -1,8 +1,8 @@
 # Harry Moore (hrm15) and Shiraz Butt (sb4515)
 
 defmodule Leader do
-  @min_livelock_sleep_time 20
-  @max_livelock_sleep_time 500
+  @min_livelock_sleep_time 5000
+  @max_livelock_sleep_time 10000
 
   def start config do
     receive do
