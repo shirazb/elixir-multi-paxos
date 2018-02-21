@@ -82,11 +82,11 @@ defmodule Leader do
   # Returns the { s, c } entries from ps such that there is no { s, c' } entry
   # in rs, where c != c'; union the entries from rs.
   defp merge_without_conflicts proposals, already_accepted_pvals do
-    max_accepted_proposals =
+    max_already_accepted_proposals =
         proposals_with_highest_ballot_nums already_accepted_pvals
 
     merge_by_dropping_entries_with_conflicting_values_from_former proposals,
-        max_accepted_proposals
+        max_already_accepted_proposals
   end
 
   defp proposals_with_highest_ballot_nums pvals do
@@ -102,11 +102,9 @@ defmodule Leader do
     end
 
     max_pvals_by_sc = Enum.reduce pvals, Map.new(), put_if_higher
-
     put_slot_to_command = fn { { s, c }, _b }, m -> Map.put m, s, c end
 
     max_pvals = Enum.reduce max_pvals_by_sc, Map.new(), put_slot_to_command
-
     max_pvals
   end
 
@@ -145,8 +143,8 @@ defmodule Leader do
     not_conflicting
   end
 
-  # Processes doing the same phases in a repeating synchronised pattern causes
-  # livelock to persist, so to avoid this sleep on preemption for differing
+  # Leaders preempting eachother in a repeating, synchronised pattern causes
+  # livelock to persist. To avoid this, sleep on preemption for differing
   # amounts of time.
   defp sleep_to_try_avoid_livelock() do
     sleep_time = Enum.random @min_livelock_sleep_time..@max_livelock_sleep_time
