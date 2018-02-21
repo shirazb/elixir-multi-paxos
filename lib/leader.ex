@@ -59,7 +59,7 @@ defmodule Leader do
         active = true
 
       { :preempted, { b_id, _leader } = other_ballot_num } ->
-        IO.puts "Leader #{inspect self()}: Preempted!"
+        IO.puts "Leader #{inspect self()}: Preempted by #{inspect other_ballot_num}"
         # Ignore preemptions from lower ballot numbers.
         if (other_ballot_num > ballot_num) do
           # We need to retry with higher ballot number. Spawn a Scout to
