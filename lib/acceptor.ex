@@ -10,24 +10,23 @@ defmodule Acceptor do
 
   def listen ballot_num, accepted do
 
-    receive do
-
+    { ballot_num, accepted } = receive do
       {:p1a, leader, b} ->
         IO.puts "Acceptor #{inspect self()}: Received p1a"
-        if b > ballot_num do
-          ballot_num = b
-        end
+        ballot_num = if b > ballot_num do b else ballot_num end
 
         send leader, {:p1b, self(), ballot_num, accepted}
 
+        { ballot_num, accepted }
       {:p2a, leader, {b, _s, _tx} = pvalue } ->
         IO.puts "Acceptor #{inspect self()}: Received p2a"
-        if b == ballot_num do
-          accepted = MapSet.put(accepted, pvalue)
-        end
+        accepted = if b == ballot_num do
+            MapSet.put(accepted, pvalue) else
+            accepted end
 
         send leader, {:p2b, self(), ballot_num}
 
+        { ballot_num, accepted }
     end
 
     listen ballot_num, accepted
