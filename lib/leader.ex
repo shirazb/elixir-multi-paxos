@@ -1,7 +1,8 @@
 # Harry Moore (hrm15) and Shiraz Butt (sb4515)
 
 defmodule Leader do
-  @livelock_sleep_time 200
+  @min_livelock_sleep_time 20
+  @max_livelock_sleep_time 500
 
   def start config do
     receive do
@@ -46,8 +47,8 @@ defmodule Leader do
 
         # Spawn a commander for each proposal.
         for { slot, command } <- proposals do
-          IO.puts "Leader #{inspect self()}: Commanding {#{slot}, #{command}}"
-          spawn Commander, :start, [config, acceptors, replicas,
+          IO.puts "Leader #{inspect self()}: Commanding {#{slot}, #{inspect command}}"
+          spawn Commander, :start, [config, self(), acceptors, replicas,
               { ballot_num, slot, command }]
         end
 
@@ -64,8 +65,7 @@ defmodule Leader do
           # number is adopted).
           # To help prevent livelock, sleep for a random amount of time before
           # retrying.
-          # TODO: remove magic numbers.
-          Process.sleep (100 + DAC.random(@livelock_sleep_time))
+          sleep_to_try_avoid_livelock()
           active = false
           ballot_num = { b_id + 1, self() }
           spawn Scout, :start, [config, self(), acceptors, ballot_num]
@@ -90,7 +90,7 @@ defmodule Leader do
   end
 
   defp proposals_with_highest_ballot_nums pvals do
-    put_if_higher = fn m, { b, s, c } ->
+    put_if_higher = fn { b, s, c }, m ->
         # Add { s, c } -> b to the map if b is the highest found so far for
         # that { s, c } combination.
         case Map.fetch m, { s, c } do
@@ -103,7 +103,7 @@ defmodule Leader do
 
     max_pvals_by_sc = Enum.reduce pvals, Map.new(), put_if_higher
 
-    put_slot_to_command = fn m, { { s, c }, _b } -> Map.put m, s, c end
+    put_slot_to_command = fn { { s, c }, _b }, m -> Map.put m, s, c end
 
     max_pvals = Enum.reduce max_pvals_by_sc, Map.new(), put_slot_to_command
 
@@ -115,7 +115,7 @@ defmodule Leader do
     not_conflicting = Map.new()
 
     # TODO: check deleting from ys does not persist after function.
-    add_ys_and_remove_conflicting_xs = fn { n_c, xs_w_c }, { y_s, y_c } ->
+    add_ys_and_remove_conflicting_xs = fn { y_s, y_c }, { n_c, xs_w_c } ->
         # Add entry from ys to not conflicting.
         n_c = Map.put n_c, y_s, y_c
 
@@ -139,10 +139,17 @@ defmodule Leader do
     not_conflicting = Enum.reduce(
         xs_without_conflicts,
         not_conflicting,
-        &Map.put/2
+        fn { s, c }, m -> Map.put m, s, c end
     )
 
     not_conflicting
   end
 
+  # Processes doing the same phases in a repeating synchronised pattern causes
+  # livelock to persist, so to avoid this sleep on preemption for differing
+  # amounts of time.
+  defp sleep_to_try_avoid_livelock() do
+    sleep_time = Enum.random @min_livelock_sleep_time..@max_livelock_sleep_time
+    Process.sleep sleep_time
+  end
 end

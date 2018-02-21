@@ -28,7 +28,7 @@ defmodule Replica do
 
       { :decision, s, c } ->
         decisions = Map.put decisions, s, c
-        IO.puts "received a decision in replica"
+        IO.puts "Replica #{inspect self()}: Received decision that slot #{s} is #{inspect c}"
         { proposals, requests, slot_out, database } = perform_decisions(
             slot_out,
             decisions,
@@ -64,12 +64,12 @@ defmodule Replica do
       :error -> { proposals, requests, slot_out, database }
       { :ok, decided_command } ->
         case Map.fetch proposals, slot_out do
+          :error -> nil
           { :ok, conflicting_proposed_command } ->
             proposals = Map.delete proposals, slot_out
             if (decided_command != conflicting_proposed_command) do
               requests = MapSet.put requests, conflicting_proposed_command
             end
-          :error -> nil
         end
 
         { slot_out, database } = perform(
