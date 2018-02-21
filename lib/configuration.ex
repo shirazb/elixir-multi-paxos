@@ -5,8 +5,8 @@
 defmodule Configuration do
 
 def version 1 do	# configuration 1
-  %{ 
-  debug_level:  0, 	# debug level 
+  %{
+  debug_level:  0, 	# debug level
   docker_delay: 5_000,	# time (ms) to wait for containers to start up
 
   max_requests: 500,   	# max requests each client will make
@@ -26,8 +26,9 @@ def version 2 do	# same as version 1 with higher debug level
  Map.put config, :debug_level, 1
 end
 
-def version 3 do	# configuration 3
+def version 3 do	# All debug statements
+  config = version 1
+  Map.put config, :debug_level, 3
 end
 
 end # module -----------------------
-
